@@ -15,6 +15,11 @@ class Driver:
 		self.hostlist=self.fs.list_of_hosts()
 		self.switchlist=self.fs.list_of_switches()
 
+	
+	def printHostDetails(self):
+		pass
+
+
 	def getAllHosts(self):
 		"""Prints list of hosts"""
 		print "-------------------------------------"
@@ -63,7 +68,7 @@ class Driver:
 				print ' ---> '.join(path)
 				ch=raw_input('Want to push the path into controller ? (Y/N)')
 				if((ch=='y') or (ch=='Y')):
-					self.fm.addFlow(path)
+					pass#self.fm.addFlow(path)
 			else:
 				print "~~~~INVALID CHOICE~~~~"
 		except:
@@ -77,13 +82,28 @@ class Driver:
 	
 	def addSwitchFlow(self):
 		self.getAllSwitches()
+		
+		ncdict={}
 		flowdict={}
 		switchdict={}
+		macdict={}
+		ipdict={}
 		appaction=''
 		ethsrc=''
 		ethdest=''
 		ipport=''
 		
+		# getting mac and ip of hosts
+		count=1
+		nodelist=self.fs.nodes()
+		for i in range(1, len(nodelist)+1):
+			nlist=nodelist[i-1]['id'].split(':') 			# host is a list of string
+			if nlist[0]=='host':
+				macdict[count]=nodelist[i-1]['mac']
+				ipdict[count]=nodelist[i-1]['ip']
+				count +=1
+
+
 		actdict={1: 'Send to controller', 2: 'Send to some output port', 3: 'Discard'}	
 		matchdict={1: 'Ethernet Source Address', 
 					2: 'Ethernet Destination Address',
@@ -101,6 +121,12 @@ class Driver:
 			idletimeout=int(raw_input(' Enter idle-timeout : '))
 			hardtimeout=int(raw_input(' Enter hard-timeout : '))
 			priority=int(raw_input(' Enter priority(0-10) : '))
+			maxsize=int(raw_input(' Enter maximum packet size : '))
+
+			#getting all node-connectors for the switch
+			nclist=self.fs.getNodeConnectors(switchdict[switch])
+			for i in range(1, len(nclist)+1):
+				ncdict[i]=nclist[i-1]
 
 			print '-----------------------------------'
 			print '      Matching Criteria '
@@ -109,24 +135,68 @@ class Driver:
 				print '  %d.  %s' % (i, matchdict[i])
 			while 1:
 				print '-----------------------------------'
-				match=int(raw_input("  Enter matching criteria : "))
+				matchid=int(raw_input("  Enter matching criteria : "))
 				print '-----------------------------------'
-				if match in range(1, len(matchdict)+1):
+				if matchid in range(1, len(matchdict)+1):
 					break
 				else:
 					print '~~~~~Wrong Entry~~~~~'
 					continue
 
-			if match==1:
-				ethsrc=raw_input(' Enter ethernet source address : ')
-			elif match==2:
-				ethdest=raw_input(' Enter ethernet destination address : ')
-			elif match==3:
-				ethsrc=raw_input(' Enter ethernet source address : ')
-				ethdest=raw_input(' Enter ethernet destination address : ')
-			elif matchdict==4:
-				ipport=raw_input(' Enter input port address : ')
+			if matchid==1:
+				print '%s   %s   %s' % ('s.no.', 'mac-id', 'ip')
+				print '-----------------------------------'
+				for i in range(1, len(macdict)+1):
+					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
+				print '-----------------------------------'
+				ethsrc=int(raw_input(' Enter ethernet source address : '))
+				print '-----------------------------------'
+			
+			elif matchid==2:
+				print '%s   %s   %s' % ('s.no.', 'mac-id', 'ip')
+				print '-----------------------------------'
+				for i in range(1, len(macdict)+1):
+					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
+				ethdest=int(raw_input(' Enter ethernet destination address : '))
+				print '-----------------------------------'
+			
+			elif matchid==3:
+				print '%s   %s   %s' % ('s.no.', 'mac-id', 'ip')
+				print '-----------------------------------'
+				for i in range(1, len(macdict)+1):
+					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
+				
+				while 1:
+					print '-----------------------------------'
+					ethsrc=int(raw_input(' Enter ethernet source address : '))
+					ethdest=int(raw_input(' Enter ethernet destination address : '))
+					print '-----------------------------------'
+					if macdict[ethsrc]==macdict[ethdest]:
+						print '  Source and destination cannot be the same.'
+						print '  Please choose different ource and destination.'
+						continue
+					else:
+						break
 
+
+			elif matchid==4:
+				print '-----------------------------------'
+				print "  Available ports of "+switchdict[switch]+' are : '
+				
+				for i in range(1, len(ncdict)+1):
+					print '  %2d.  %s' % (i, ncdict[i])
+
+				while 1:
+					print '-----------------------------------'
+					ipport=int(raw_input(' Enter input port no. : '))
+					print '-----------------------------------'
+					if ipport in range(1, len(ncdict)+1):
+						break
+					else:
+						print '~~~~~Port not available~~~~~'
+						continue
+			
+			print '-----------------------------------'
 			print '       Applied Action '
 			print '-----------------------------------'
 			for i in range(1, len(actdict)+1):
@@ -141,7 +211,15 @@ class Driver:
 				appaction=raw_input(' Enter output port no. : ')
 			elif action==3:
 				appaction='DISCARD'
-			flowdict={'switch': switchdict[switch], 'flowid': flowid, 'idle-timeout': idletimeout, 'hard-timeout': hardtimeout, 'priority': priority, 'match': matchdict[match], 'action': appaction}
+			
+			flowdict={'switch': switchdict[switch],
+						 'flowid': flowid, 
+						 'idle-timeout': idletimeout, 
+						 'hard-timeout': hardtimeout, 
+						 'priority': priority, 
+						 'max-length': maxsize,
+						 'match': {'id': matchid, 'address':{'source': macdict[ethsrc], 'destination': macdict[ethdest], 'ip-port':ncdict[ipport]}}, 
+						 'action': appaction}
 			print flowdict
 			#fm.addFlow
 
