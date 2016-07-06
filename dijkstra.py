@@ -127,7 +127,7 @@ class Dijkstra:
 				if hostlist[i] != hostlist[j]:
 					path=self.shortest_path(hostlist[j], hostlist[i])
 					print "path between "+hostlist[i]+" and "+hostlist[j]+" is: "
-					print path
+					print ' ---> '.join(path)
 					print "_________________________________________________________________________"
 					#fm.addFlow(path)
 				j += 1
@@ -146,23 +146,7 @@ def main():
 	time=end-start
 	print "Execution time: "+str(time)
 	#print "ends: "+str(datetime.datetime.now())
-	'''dj=Dijkstra()
-	fs = FlowStatistics()
-	nodelist=fs.nodes()
-	hostlist=fs.list_of_hosts()
-
-	#print "node-ip         ::          node-ip"
-	i=0
-	while i<len(hostlist):
-		j=0
-		while j<len(nodelist):
-			if hostlist[i]==nodelist[j]['id']:
-				#print nodelist[j]['id']+"  ::  "+nodelist[j]['ip']
-				break
-			j += 1
-		i += 1	
-	#for i in dj.shortest_path():
-		#print i'''
+	
     
 if __name__ == '__main__':
 	main()

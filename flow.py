@@ -6,38 +6,23 @@ from loadbalancer import FlowStatistics
 
 class FlowManagement:
 	""" Adds, modifies and deletes flows from switch through Controller """
+	def __init__(self):
+		self.fs=FlowStatistics()
 
-	def addFlow(self, pathlist):
+	def addPathFlow(self, pathlist):
 		""" Adds new flows into the switch """
 
-		fs=FlowStatistics()
-		edgesd=fs.edges_source_dest()
-		edge=fs.edges()
-		#dk=Dijkstra()
-		'''print "============================================="
-		print str(edgesd)
-		print str(edge)
-		print "=============================================="'''
-		#pathlist=dk.shortest_path()
-		#pathlist=['host:8e:1c:95:f1:6c:1d', 'openflow:22', 'openflow:23', 'openflow:24', 'host:aa:09:ee:96:2e:8f']
-		
-		#print pathlist
-		#print edgesd
-		#print edge
-		
+		edgesd=self.fs.edges_source_dest()
+		edge=self.fs.edges()
+				
 		'Finding edge-id of the edge connecting source and destn nodes'
 		i=0
 		edgeid=[]
-		#print "Edgesd"+str(edgesd)
 		while i<(len(pathlist)-1):
 			edgesource=pathlist[i]
 			edgedest=pathlist[i+1]
-			#print "Source: "+str(edgesource)+", Dest:"+str(edgedest)
 			j=0
 			while j<len(edgesd):
-				#print "source : "+edgesource+", dest: "+edgedest
-				#print "source : "+edgesd[j]['source']+", dest: "+edgesd[j]['destn']
-				#print "=================================================="
 				if (edgesd[j]['source']==edgesource) and (edgesd[j]['destn']==edgedest):
 						edge_id=edgesd[j]['id']
 						edgeid.append(edge_id)
@@ -45,11 +30,6 @@ class FlowManagement:
 				j += 1
 			i += 1
 		
-		"""print "--------------PATH LIST-----------------------------"
-		print pathlist
-		print "--------------edge id-----------------------------"
-		print edgeid"""
-
 		'Finding source and destination port number'
 		x=0
 		sourceport=[]
@@ -73,29 +53,80 @@ class FlowManagement:
 		print "-------------------------------------------------------"  
 		
 		'adding flows into the switches'
-		fm=FlowManagement()
-		#fm.deleteAllFlow()
+		h = httplib2.Http(".cache")
+		h.add_credentials('admin', 'admin')
+		base_url='http://localhost:8181/restconf/config/opendaylight-inventory:nodes/node/'
+		tail_url='/table/0/'
+		header={'Content-Type':'application/json', 'Accept': 'application/json'}
+		
+		#findinfg source and destination host address
+		srchost=pathlist[0][5:]
+		desthost=pathlist[len(pathlist)-1][5:]
+		
+		m=1
+		while m<(len(pathlist)-1):
+			nodeid=pathlist[m]
+			url=base_url+nodeid+tail_url
+
+			#finding output port no.
+			outport=sourceport[m].split(':')
+			port=outport[len(outport)-1]
+			
+			data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': 0, 'flags': '', 'hard-timeout': 0, 'priority': 10, 'cookie': 3026418949592973442, 'table_id': 0, 'id': '#manish', 'match': {'ethernet-match': {'ethernet-source': {'address': srchost}, 'ethernet-destination': {'address': desthost}}}, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': {'max-length': 65535, 'output-node-connector': port}, 'order': 0}]}}]}}]}]}#, 'flow-hash-id-map':[{'flow-id': '#manish', 'hash': "Match [_ethernetMatch=EthernetMatch [_ethernetDestination=EthernetDestination [_address=MacAddress [_value=0A:3E:85:D2:3D:EF], augmentation=[]], _ethernetSource=EthernetSource [_address=MacAddress [_value=66:8F:00:F2:71:96], augmentation=[]], augmentation=[]], augmentation=[]]103026418949592973435"}]]}]}
+			response, request=h.request(url, "PUT", json.dumps(data), headers=header)
+			print "-----Response of putting flow in switch "+nodeid+"-----"
+			print response
+			print "====================="
+			m += 1
+	
+
+	def addFlow(self, flowdict):
+		"""" Adds a flow to a switch """
+				
+		matchdict={}
+		actdict={}
+		switch=flowdict['switch']
+		flowid=flowdict['flowid']
+		idletimeout=flowdict['idle-timeout']
+		hardtimeout=flowdict['hard-timeout']
+		priority=flowdict['priority']
+		action=flowdict['appaction']
+		matchid=flowdict['match']['id']
+		maxsize=flowdict['max-length']
+		ethsrc=flowdict['match']['address']['source']
+		ethdest=flowdict['match']['address']['destination']
+		ipport=flowdict['match']['address']['ip-port']
+		
+		#authentication credentials
 		h = httplib2.Http(".cache")
 		h.add_credentials('admin', 'admin')
 		base_url='http://localhost:8181/restconf/config/opendaylight-inventory:nodes/node/'
 		tail_url='/table/0/'
 		header={'Content-Type':'application/json', 'Accept': 'application/json'}
 
-		m=1
-		n=0
-		
-		while m<(len(pathlist)-1):
-			nodeid=pathlist[m]
-			url=base_url+nodeid+tail_url
+		url=url=base_url+flowdict['switch']+tail_url
 
-			#data={"flow-node-inventory:table":[{"id":0, "flow":[{"id":"0","hard-timeout":0,"table_id":0,"match":{"in-port":destnport[m-1]},"instructions":{"instruction":{"order":0,"apply-actions":{"action":[{"order":0,"output-action":{"max-length":65535,"output-node-connector":sourceport[m]}}]}}}},{"id":"1","hard-timeout":0,"table_id":0,"match":{"ethernet-match":{"ethernet-type":{"type":35020}}},"instructions":{"instruction":{"order":0,"apply-actions":{"action":[{"order":0,"output-action":{"max-length":65535,"output-node-connector":"CONTROLLER"}}]}}}}]}]}
-			data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': 0, 'flags': '', 'hard-timeout': 0, 'priority': 10, 'cookie': 3026418949592973442, 'table_id': 0, 'id': '#manish', 'match': {'ethernet-match': {'ethernet-source': {'address': '0a:03:5c:70:f8:bd'}, 'ethernet-destination': {'address': 'aa:f0:65:42:1b:d1'}}}, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': {'max-length': 65535, 'output-node-connector': '2'}, 'order': 0}]}}]}}]}]}#, 'flow-hash-id-map':[{'flow-id': '#manish', 'hash': "Match [_ethernetMatch=EthernetMatch [_ethernetDestination=EthernetDestination [_address=MacAddress [_value=0A:3E:85:D2:3D:EF], augmentation=[]], _ethernetSource=EthernetSource [_address=MacAddress [_value=66:8F:00:F2:71:96], augmentation=[]], augmentation=[]], augmentation=[]]103026418949592973435"}]]}]}
-			response, request=h.request(url, "PUT", json.dumps(data), headers=header)
-			print "-----Response of putting flow in switch "+nodeid+"-----"
-			print response
-			print "====================="
-			m += 1
+		if matchid==1:
+			matchdict={'ethernet-match': {'ethernet-source': {'address': ethsrc}}}
+			
+		elif matchid==2:
+			matchdict={'ethernet-match': {'ethernet-destination': {'address': ethdest}}}
 		
+		elif matchid==3:
+			matchdict={'ethernet-match': {'ethernet-source': {'address': ethsrc}, 'ethernet-destination': {'address': ethdest}}}
+		
+		elif matchid==4:
+			matchdict={'in-port': ipport}
+
+		actdict={'max-length': maxsize, 'output-node-connector': action}
+		
+		data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': idletimeout, 'flags': '', 'hard-timeout': hardtimeout, 'priority': priority, 'cookie':0 , 'table_id': 0, 'id': flowid, 'match': matchdict, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': actdict, 'order': 0}]}}]}}]}]}
+		
+		response, request=h.request(url, "PUT", json.dumps(data), headers=header)
+		print "-----Response of putting flow in switch "+nodeid+"-----"
+		print response
+		print "====================="
+
 
 	def deleteAnyFlow(self, switch_id):
 		""" Deletes existing flows from a paricular switch """
@@ -145,6 +176,8 @@ class FlowManagement:
 			i += 1
 
 
+
+
 	def deleteAllFlow(self):
 		""" Deletes existing flows from all switches """
 		fs=FlowStatistics()
@@ -160,7 +193,7 @@ class FlowManagement:
 
 def main():
 	#FlowManagement().deleteAnyFlow("openflow:24")
-	FlowManagement().addFlow(['host:d2:5d:e6:48:88:f3', 'openflow:14', 'openflow:11', 'openflow:12', 'host:6a:50:9b:47:53:b9'])
+	FlowManagement().deleteAllFlow()
 
 if __name__ == '__main__':
 	main()

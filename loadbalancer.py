@@ -93,12 +93,15 @@ class FlowStatistics:
 
 
 	#to retrieve node-connector-id corresponding to a node-id and port-number	
-	def node_connector_id(self, node_id, port_no):
+	def getNodeConnectors(self, node_id):#, port_no):
+		nclist=[]
 		for nc in self.stat_node_list:
 			if nc['node-id']==node_id:
 				for j in nc['node-connector']:
-					if j['port-number']==port_no:
-						return j['id']
+					if j['port-number']!= 'LOCAL':
+						nclist.append(j['id'])
+		return nclist#if j['port-number']==port_no:
+						#return j['id']
 
 
 	#to retrieve port-number corresponding to a node-connector-id	
@@ -282,12 +285,11 @@ class FlowStatistics:
 
 
 def main():
-	print "run"
-	print FlowStatistics().list_of_hosts()
+	FlowStatistics().getNodeConnectors('openflow:22')
 	#self.statistics()
 	#topology()
 	#dynamics()
-	FlowStatistics().edges_source_dest()
+	#FlowStatistics().edges_source_dest()
 if __name__ == '__main__':
 	main()
 
