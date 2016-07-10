@@ -15,65 +15,90 @@ class Driver:
 		self.hostlist=self.fs.list_of_hosts()
 		self.switchlist=self.fs.list_of_switches()
 
-	
+		self.hostdict={}
+		for i in range (1, len(self.hostlist)+1):
+			self.hostdict[i]=self.hostlist[i-1]
+		
+		self.switchdict={}
+		for i in range (1, len(self.switchlist)+1):
+			self.switchdict[i]=self.switchlist[i-1]
+
+
 	def printHostDetails(self):
 		pass
 
 
 	def getAllHosts(self):
 		"""Prints list of hosts"""
+		
 		print "-------------------------------------"
 		print "=====       LIST OF HOSTS       ====="
 		print "-------------------------------------"
-		for i in range(1, len(self.hostlist)+1):
-			print '  %2d.  %s' % (i, self.hostlist[i-1])
+		for i in range(1, len(self.hostdict)+1):
+			print '  %2d.  %s' % (i, self.hostdict[i])
+	
 	
 	def getAllSwitches(self):
 		"""Prints list of switches"""
+		
 		print "-------------------------------------"
 		print "=====     LIST OF SWITCHES      ====="
 		print "-------------------------------------"
-		for i in range(1, len(self.switchlist)+1):
-			print '  %2d.  %s' % (i, self.switchlist[i-1])
+		for i in range(1, len(self.switchdict)+1):
+			print '  %2d.  %s' % (i, self.switchdict[i])
 
 	
 	def getAllPaths(self):
-		print "---------------------------------------"
-		print "Seq No.	:  		Host Id"
-		print "---------------------------------------"
-		for i in range(1,len(self.hostlist)+1):
-			print '  %2d.  %s' % (i, self.hostlist[i-1])
-		print "---------------------------------------"
+		"""Gets different paths between two hosts"""
 
-		source=raw_input("  Input Source sequence no. : ")
-		target=raw_input("  Input Target sequence no. : ")
-		#dj.getAllPaths(source, target)
+		self.getAllHosts()
+		try:
+			print "-------------------------------------"
+			source=int (raw_input("  Input Source sequence no. : "))
+			target=int (raw_input("  Input Target sequence no. : "))
+			print "-------------------------------------"
+			
+			if source==target:
+				print "~~Source and destination can't be the same~~~"
+				print "-------------------------------------"
+		except :
+			print '~~~Invalid Choice~~~'
+			print "-------------------------------------"
+		
 
 	
 	def getAnyShortestPath(self):
-		print "---------------------------------------"
-		print "Seq No.	:  		Host Id"
-		print "---------------------------------------"
-		for i in range(1,len(self.hostlist)+1):
-			print str(i)+"	:	"+self.hostlist[i-1]
-		print "---------------------------------------"
+		"Gets the shortest path between any two hosts"
 
-		try:
-			source=int(raw_input("  Input Source sequence no. : "))
-			target=int(raw_input("  Input Target sequence no. : "))
-			
-			if source and target in range(1,len(self.hostlist)+1):
-				path=self.dj.anyShortestPath(self.hostlist[target-1], self.hostlist[source-1])
-				print "Shortest Path between "+self.hostlist[source-1]+" and "+self.hostlist[target-1]+" is :"
-				print ' ---> '.join(path)
-				ch=raw_input('Want to push the path into controller ? (Y/N)')
-				if((ch=='y') or (ch=='Y')):
-					pass#self.fm.addFlow(path)
-			else:
-				print "~~~~INVALID CHOICE~~~~"
-		except:
-			traceback.print_exc()
-			return
+		self.getAllHosts()
+
+		while 1:
+			try:
+				print "-------------------------------------"
+				source=int (raw_input("  Input Source sequence no. : "))
+				target=int (raw_input("  Input Target sequence no. : "))
+				print "-------------------------------------"
+				
+				if source!=target:						
+					path=self.dj.anyShortestPath(self.hostdict[target], self.hostdict[source])
+					print "Shortest Path between "+self.hostdict[source]+" and "+self.hostdict[target]+" is :"
+					print ' ---> '.join(path)
+					ch=raw_input('Want to push the path into controller ? (Y/N)')
+					if ((ch=='y') or (ch=='Y')):
+						pass#self.fm.addFlow(path)
+					break
+				else:
+					print "~~Source and destination can't be the same~~~"
+					choice=raw_input('Want to retry ? (Y/N)')
+					if ((choice=='y') or (choice=='Y')): 
+						continue
+					else:
+						break
+					print "-------------------------------------"
+			except:
+				traceback.print_exc()
+				print "-------------------------------------"
+				return
 
 	
 	def getAllShortestPath(self):
@@ -85,7 +110,7 @@ class Driver:
 		
 		ncdict={}
 		flowdict={}
-		switchdict={}
+		#switchdict={}
 		macdict={}
 		ipdict={}
 		appaction=''
@@ -101,7 +126,7 @@ class Driver:
 			if nlist[0]=='host':
 				macdict[count]=nodelist[i-1]['mac']
 				ipdict[count]=nodelist[i-1]['ip']
-				count +=1
+				count += 1
 
 
 		actdict={1: 'Send to controller', 2: 'Send to some output port', 3: 'Discard'}	
@@ -110,12 +135,12 @@ class Driver:
 					3: 'Ethernet Source and Destination Address',
 					4: 'Input Node Connector'}
 
-		for i in range(1, len(self.switchlist)+1):
-			switchdict[i]=self.switchlist[i-1]
+		#for i in range(1, len(self.switchlist)+1):
+			#switchdict[i]=self.switchlist[i-1]
 		try:
 			print '-----------------------------------'
 			switch=int(raw_input("  Enter switch no. : "))
-			print '  You have selected '+switchdict[switch]+' to add a flow.'
+			print '  You have selected '+self.switchdict[switch]+' to add a flow.'
 			print '-----------------------------------'
 			flowid=raw_input(' Enter flow id : ')
 			idletimeout=int(raw_input(' Enter idle-timeout : '))
@@ -124,7 +149,7 @@ class Driver:
 			maxsize=int(raw_input(' Enter maximum packet size : '))
 
 			#getting all node-connectors for the switch
-			nclist=self.fs.getNodeConnectors(switchdict[switch])
+			nclist=self.fs.getNodeConnectors(self.switchdict[switch])
 			for i in range(1, len(nclist)+1):
 				ncdict[i]=nclist[i-1]
 
@@ -141,27 +166,44 @@ class Driver:
 					break
 				else:
 					print '~~~~~Wrong Entry~~~~~'
+					print '-----------------------------------'
 					continue
 
 			if matchid==1:
-				print '%s   %s   %s' % ('s.no.', 'mac-id', 'ip')
+				print '%s      %s  	    %s' % ('s.no.', 'mac-id', 'ip')
 				print '-----------------------------------'
 				for i in range(1, len(macdict)+1):
 					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
-				print '-----------------------------------'
-				ethsrc=int(raw_input(' Enter ethernet source address : '))
-				print '-----------------------------------'
+				
+				while 1:
+					print '-----------------------------------'
+					ethsrc=int(raw_input(' Enter ethernet source address : '))
+					print '-----------------------------------'
+					if ethsrc in range(1, len(macdict)+1):
+						break
+					else:
+						print '~~~~~Wrong Entry~~~~~'
+						print '-----------------------------------'
+						continue
 			
 			elif matchid==2:
-				print '%s   %s   %s' % ('s.no.', 'mac-id', 'ip')
+				print '%s      %s  	    %s' % ('s.no.', 'mac-id', 'ip')
 				print '-----------------------------------'
 				for i in range(1, len(macdict)+1):
 					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
-				ethdest=int(raw_input(' Enter ethernet destination address : '))
-				print '-----------------------------------'
+				while 1:
+					print '-----------------------------------'
+					ethdest=int(raw_input(' Enter ethernet destination address : '))
+					print '-----------------------------------'
+					if ethdest in range(1, len(macdict)+1):
+						break
+					else:
+						print '~~~~~Wrong Entry~~~~~'
+						print '-----------------------------------'
+						continue
 			
 			elif matchid==3:
-				print '%s   %s   %s' % ('s.no.', 'mac-id', 'ip')
+				print '%s      %s  	    %s' % ('s.no.', 'mac-id', 'ip')
 				print '-----------------------------------'
 				for i in range(1, len(macdict)+1):
 					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
@@ -173,7 +215,8 @@ class Driver:
 					print '-----------------------------------'
 					if macdict[ethsrc]==macdict[ethdest]:
 						print '  Source and destination cannot be the same.'
-						print '  Please choose different ource and destination.'
+						print '  Please choose different source and destination.'
+						print '-----------------------------------'
 						continue
 					else:
 						break
@@ -224,7 +267,7 @@ class Driver:
 			#fm.addFlow
 
 		except:
-			print "INVALID CHOICE"
+			print "=====INVALID CHOICE======"
 
 
 	def getSwitchFlow(self):
@@ -280,7 +323,7 @@ class Driver:
 				
 				choice[option]()
 			except:
-				print 'wrong choice'
+				print '    ### wrong choice ###'
 				traceback.print_exc()
 				#return
 			
