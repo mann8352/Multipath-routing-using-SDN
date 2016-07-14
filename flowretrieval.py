@@ -8,7 +8,7 @@ class FlowRetrieval:
 
 	def __init__(self):
 		pass
-		
+
 	def retrieveFlow(self, switch):
 		"""retrieves flows"""
 
@@ -50,8 +50,20 @@ class FlowRetrieval:
 		
 		return flist
 
+
+	def getFlowIds(self, switch):
+		"""returns flow-ids of all flows of a switch"""
+
+		flowlist=self.getFlowDetails(switch)
+		flowidlst=[]
+
+		for flow in flowlist:
+			flowidlst.append(flow['id'])
+		return flowidlst
+
+
 def main():
-	FlowRetrieval().getFlowDetails('openflow:22')
+	print FlowRetrieval().retrieveFlow('openflow:22')
 	
 if __name__ == '__main__':
 	main()

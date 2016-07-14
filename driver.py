@@ -5,15 +5,20 @@ import traceback
 from dijkstra import Dijkstra
 from flow import FlowManagement
 from loadbalancer import FlowStatistics
+from flowretrieval import FlowRetrieval
 
 class Driver:
-	"""Run the application"""
+	"""Runs the application"""
 	def __init__(self):
+		self.fr=FlowRetrieval()
 		self.fs=FlowStatistics()
 		self.fm=FlowManagement()
 		self.dj=Dijkstra()
-		self.hostlist=self.fs.list_of_hosts()
-		self.switchlist=self.fs.list_of_switches()
+		try:
+			self.hostlist=self.fs.list_of_hosts()
+			self.switchlist=self.fs.list_of_switches()
+		except:
+			traceback.print_exc()
 
 		self.hostdict={}
 		for i in range (1, len(self.hostlist)+1):
@@ -22,10 +27,6 @@ class Driver:
 		self.switchdict={}
 		for i in range (1, len(self.switchlist)+1):
 			self.switchdict[i]=self.switchlist[i-1]
-
-
-	def printHostDetails(self):
-		pass
 
 
 	def getAllHosts(self):
@@ -102,15 +103,16 @@ class Driver:
 
 	
 	def getAllShortestPath(self):
+		"""  Returns shortest path between each pair of hosts"""
 		self.dj.allShortestPath()
 
 	
 	def addSwitchFlow(self):
+		""" Adds flow to a switch"""
 		self.getAllSwitches()
 		
 		ncdict={}
 		flowdict={}
-		#switchdict={}
 		macdict={}
 		ipdict={}
 		appaction=''
@@ -118,31 +120,45 @@ class Driver:
 		ethdest=''
 		ipport=''
 		
-		# getting mac and ip of hosts
-		count=1
-		nodelist=self.fs.nodes()
-		for i in range(1, len(nodelist)+1):
-			nlist=nodelist[i-1]['id'].split(':') 			# host is a list of string
-			if nlist[0]=='host':
-				macdict[count]=nodelist[i-1]['mac']
-				ipdict[count]=nodelist[i-1]['ip']
-				count += 1
-
-
 		actdict={1: 'Send to controller', 2: 'Send to some output port', 3: 'Discard'}	
 		matchdict={1: 'Ethernet Source Address', 
 					2: 'Ethernet Destination Address',
 					3: 'Ethernet Source and Destination Address',
 					4: 'Input Node Connector'}
 
-		#for i in range(1, len(self.switchlist)+1):
-			#switchdict[i]=self.switchlist[i-1]
 		try:
+			# getting mac and ip of hosts
+			count=1
+			nodelist=self.fs.nodes()
+			for i in range(1, len(nodelist)+1):
+				nlist=nodelist[i-1]['id'].split(':') 			# host is a list of string
+				if nlist[0]=='host':
+					macdict[count]=nodelist[i-1]['mac']
+					ipdict[count]=nodelist[i-1]['ip']
+					count += 1
+
 			print '-----------------------------------'
 			switch=int(raw_input("  Enter switch no. : "))
 			print '  You have selected '+self.switchdict[switch]+' to add a flow.'
 			print '-----------------------------------'
-			flowid=raw_input(' Enter flow id : ')
+			
+			while 1:
+				count=0
+				print '  Entered Id is prefixed by # automatically. Enter only flow-id. '
+				flowid=raw_input(' Enter flow id : ')
+				flowidlist=self.fr.getFlowIds(self.switchdict[switch])
+				if ('#'+flowid) in flowidlist:
+					print '-----------------------------------'
+					print 'flowid '+flowid+' already exists in '+self.switchdict[switch]
+					if count==0:
+						print ' Already present IDs are : '
+						for ids in flowidlist:
+							print ids
+						print '-----------------------------------'
+					continue
+				else:
+					break
+			
 			idletimeout=int(raw_input(' Enter idle-timeout : '))
 			hardtimeout=int(raw_input(' Enter hard-timeout : '))
 			priority=int(raw_input(' Enter priority(0-10) : '))
@@ -267,17 +283,80 @@ class Driver:
 			#fm.addFlow
 
 		except:
-			print "=====INVALID CHOICE======"
+			print "=====Invalid Input======"
 
 
 	def getSwitchFlow(self):
-		pass
+		""" Returns the details of all flows of the switch """
 
+		flowlist=[]
+		self.getAllSwitches()
+		try:
+			print '-----------------------------------'
+			switch=int(raw_input("  Enter switch no. : "))
+			print '-----------------------------------'
+			flowlist=self.fr.getFlowDetails(self.switchdict[switch])
+
+			print '-----------------------------------'
+			print ' Flows of switch '+self.switchdict[switch]+' are: '
+			print '-----------------------------------'
+			print '%s      %s         %s' % ('Flow-ID', 'Matching Criteria', 'Instructions')
+			print '-----------------------------------'
+			for flow in flowlist:
+				print flow['id']+'		'+str(flow['match'])+'		'#+str(flow['instruction'])
+
+		except:
+			print '      Invalid choice  '
+			traceback.print_exc()
+			
+	
 	def modifySwitchFlow(self):
 		"""   """
 
 	def deleteSwitchFlow(self):
-		"""  """
+		"""  Deletes a flow from the switch """
+
+		flowlist=[]
+		flowdict={}
+		self.getAllSwitches()
+		try:
+			print '-----------------------------------'
+			switch=int(raw_input("  Enter switch no. : "))
+			print '-----------------------------------'
+			
+			#creating dictionary of flow details
+			flowlist=self.fr.getFlowDetails(self.switchdict[switch])
+			for i in range (1, len(flowlist)+1):
+				flowdict[i]=flowlist[i-1]
+			#print flowdict
+
+			print '-----------------------------------'
+			print ' Flows of switch '+self.switchdict[switch]+' are: '
+			print '-----------------------------------'
+			print '%5s %5c %12s %30s         %50s' % ('S.No.', ' ', 'Flow-ID', 'Matching Criteria', 'Instructions')
+			print '-----------------------------------'
+			count=1
+			for flow in flowlist:
+				print '%3d   %5s %-20s    %s' % (count, ' ', flow['id'], str(flow['match']))#+str(flow['instruction'])
+				count += 1
+
+			while 1:
+				print ' ------------------------------------------------------------------- '
+				flowseq=int(raw_input(' Enter S.No. : '))
+				flowdict[flowseq]
+				
+				choice=raw_input(" Want to delete flowid no. "+flowlist[flowseq-1]['id']+" ? (Y/N)")
+				if ((choice=='y') or (choice=='Y')): 
+					#delete the flow corresponding to the entered flow-id
+					self.fm.deleteAnyFlow(self.switchdict[switch])#, flowlist[flowseq-1]['id'])
+					return
+				else:
+					break
+				print "-------------------------------------"
+
+		except:
+			print '      Invalid choice  '
+			traceback.print_exc()
 
 	def exit(self):
 		self.exit()

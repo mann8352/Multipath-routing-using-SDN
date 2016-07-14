@@ -3,17 +3,28 @@ import json
 import httplib2
 import traceback
 from loadbalancer import FlowStatistics
+from flowretrieval import FlowRetrieval
+#from driver import Driver
 
 class FlowManagement:
 	""" Adds, modifies and deletes flows from switch through Controller """
 	def __init__(self):
+		self.fr=FlowRetrieval()
 		self.fs=FlowStatistics()
+		#self.dj=Dijkstra()
+		try:
+			self.hostlist=self.fs.list_of_hosts()
+			self.switchlist=self.fs.list_of_switches()
+		except:
+			traceback.print_exc()
 
 	def addPathFlow(self, pathlist):
-		""" Adds new flows into the switch """
-
-		edgesd=self.fs.edges_source_dest()
-		edge=self.fs.edges()
+		""" Adds new path flows into the switch """
+		try:
+			edgesd=self.fs.edges_source_dest()
+			edge=self.fs.edges()
+		except:
+			traceback.print_exc()
 				
 		'Finding edge-id of the edge connecting source and destn nodes'
 		i=0
@@ -72,11 +83,14 @@ class FlowManagement:
 			outport=sourceport[m].split(':')
 			port=outport[len(outport)-1]
 			
-			data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': 0, 'flags': '', 'hard-timeout': 0, 'priority': 10, 'cookie': 3026418949592973442, 'table_id': 0, 'id': '#manish', 'match': {'ethernet-match': {'ethernet-source': {'address': srchost}, 'ethernet-destination': {'address': desthost}}}, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': {'max-length': 65535, 'output-node-connector': port}, 'order': 0}]}}]}}]}]}#, 'flow-hash-id-map':[{'flow-id': '#manish', 'hash': "Match [_ethernetMatch=EthernetMatch [_ethernetDestination=EthernetDestination [_address=MacAddress [_value=0A:3E:85:D2:3D:EF], augmentation=[]], _ethernetSource=EthernetSource [_address=MacAddress [_value=66:8F:00:F2:71:96], augmentation=[]], augmentation=[]], augmentation=[]]103026418949592973435"}]]}]}
-			response, request=h.request(url, "PUT", json.dumps(data), headers=header)
-			print "-----Response of putting flow in switch "+nodeid+"-----"
-			print response
-			print "====================="
+			try:
+				data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': 0, 'flags': '', 'hard-timeout': 0, 'priority': 10, 'cookie': 3026418949592973442, 'table_id': 0, 'id': '#manish', 'match': {'ethernet-match': {'ethernet-source': {'address': srchost}, 'ethernet-destination': {'address': desthost}}}, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': {'max-length': 65535, 'output-node-connector': port}, 'order': 0}]}}]}}]}]}#, 'flow-hash-id-map':[{'flow-id': '#manish', 'hash': "Match [_ethernetMatch=EthernetMatch [_ethernetDestination=EthernetDestination [_address=MacAddress [_value=0A:3E:85:D2:3D:EF], augmentation=[]], _ethernetSource=EthernetSource [_address=MacAddress [_value=66:8F:00:F2:71:96], augmentation=[]], augmentation=[]], augmentation=[]]103026418949592973435"}]]}]}
+				response, request=h.request(url, "PUT", json.dumps(data), headers=header)
+				print "-----Response of putting flow in switch "+nodeid+"-----"
+				print response
+				print "====================="
+			except:
+				traceback.print_exc()
 			m += 1
 	
 
@@ -120,16 +134,59 @@ class FlowManagement:
 
 		actdict={'max-length': maxsize, 'output-node-connector': action}
 		
-		data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': idletimeout, 'flags': '', 'hard-timeout': hardtimeout, 'priority': priority, 'cookie':0 , 'table_id': 0, 'id': flowid, 'match': matchdict, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': actdict, 'order': 0}]}}]}}]}]}
+		try:
+			data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': idletimeout, 'flags': '', 'hard-timeout': hardtimeout, 'priority': priority, 'cookie':0 , 'table_id': 0, 'id': flowid, 'match': matchdict, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': actdict, 'order': 0}]}}]}}]}]}
+			response, request=h.request(url, "PUT", json.dumps(data), headers=header)
+			print "-----Response of putting flow in switch "+nodeid+"-----"
+			print response
+			print "====================="
+		except:
+			traceback.print_exc()
+
+
+
+	def deleteFlow(self, switch_id, flow_id):
+		""" Deletes flow with id=flow_id from switch with id=switch_id """
+
+		flow={}
+		flowlist=[]
+		h = httplib2.Http(".cache")
+		h.add_credentials('admin', 'admin')
+		header={'Content-Type':'application/json', 'Accept': 'application/json'}
+		base_del_url='http://localhost:8181/restconf/config/opendaylight-inventory:nodes/'
+		end_url='/table/0'
 		
-		response, request=h.request(url, "PUT", json.dumps(data), headers=header)
-		print "-----Response of putting flow in switch "+nodeid+"-----"
-		print response
-		print "====================="
+		try:
+			flowlist=self.fr.retrieveFlow(switch_id)
+		
+			for f in flowlist:
+				if f['id']==flow_id:
+					flow=f
+					break
+			data=flow#json.loads(str(flow))
+			print data
+
+			print "Deletion status of "+switch_id
+			print "-------------------------------------"
+			del_url=base_del_url+'node/'+switch_id+end_url
+			delresp, delreq=h.request(del_url,'PUT',json.dumps(data), headers=header)
+			print delresp
+			print "====================================" 
+			
+			delresp, delreq=h.request(del_url,'DELETE',json.dumps(data), headers=header)
+			print delresp
+			print "====================================" 
+		except:
+			traceback.print_exc()
+			
+
+
+
+
 
 
 	def deleteAnyFlow(self, switch_id):
-		""" Deletes existing flows from a paricular switch """
+		""" Deletes flow with id=flow_id from switch with id=switch_id """
 
 		fs=FlowStatistics()
 		switchlist=fs.list_of_switches()
@@ -143,36 +200,36 @@ class FlowManagement:
 		if (switch_id not in switchlist):
 			print "Switch "+switch_id+" is not present in the topology"
 			return
-		#res, req=h.request(base_del_url, "GET")
-		#data=json.loads(req)
+		
 		try:
 			res, req=h.request(base_del_url, "DELETE", headers=header)
-			#print res
-			#print "++++++++++++++++++++++++++++++++++++++++++"
 		except:
 			traceback.print_exc()
 			
 		i=0
 		while i<len(switchlist):
-			print "Deletion status of "+switch_id
-			print "-------------------------------------"
-			get_url=base_get_url+'node/'+switch_id+end_url
-			del_url=base_del_url+'node/'+switch_id+end_url
-			getresp, getreq=h.request(get_url, "GET")
-			get_response=json.loads(getreq)
+			try:
+				print "Deletion status of "+switch_id
+				print "-------------------------------------"
+				get_url=base_get_url+'node/'+switch_id+end_url
+				del_url=base_del_url+'node/'+switch_id+end_url
+				getresp, getreq=h.request(get_url, "GET")
+				get_response=json.loads(getreq)
 
-			"changes start"
-			#print get_response
+				"changes start"
+				#print get_response
 
-			"changes end "
-			#print getresp
-			#print "______________________________________"
-				
-			putresp, putreq=h.request(del_url, "PUT", json.dumps(get_response), headers=header)
-			print putresp
-			delresp, delreq=h.request(del_url,'DELETE',json.dumps(get_response), headers=header)
-			print delresp
-			print "===================================="
+				"changes end "
+				#print getresp
+				#print "______________________________________"
+					
+				putresp, putreq=h.request(del_url, "PUT", json.dumps(get_response), headers=header)
+				print putresp
+				delresp, delreq=h.request(del_url,'DELETE',json.dumps(get_response), headers=header)
+				print delresp
+				print "===================================="
+			except:
+				traceback.print_exc()
 			i += 1
 
 
