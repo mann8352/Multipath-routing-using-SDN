@@ -129,7 +129,7 @@ class Dijkstra:
 					print "path between "+hostlist[i]+" and "+hostlist[j]+" is: "
 					print ' ---> '.join(path)
 					print "_________________________________________________________________________"
-					#fm.addFlow(path)
+					fm.addPathFlow(path)
 				j += 1
 			i += 1
 		

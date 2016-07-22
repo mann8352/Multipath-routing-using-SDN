@@ -25,7 +25,8 @@ class FlowRetrieval:
 			response=json.loads(content)
 			flowlist=response['flow-node-inventory:table'][0]['flow']
 		except:
-			traceback.print_exc()
+			print ' No flow exists'
+			#traceback.print_exc()
 			return
 		
 		return flowlist
@@ -37,33 +38,38 @@ class FlowRetrieval:
 		flist=[]
 		flowlist=self.retrieveFlow(switch)
 
-		for f in flowlist:
-			flowdict={'id':'', 'match':{}, 'instruction':{}}
-			flowdict['id']=f['id']
-			flowdict['match']=f['match']
-			try:
-				flowdict['instruction']=f['instructions']
-			except:
+		try:
+			for f in flowlist:
+				flowdict={'id':'', 'match':{}, 'instruction':{}}
+				flowdict['id']=f['id']
+				flowdict['match']=f['match']
+				try:
+					flowdict['instruction']=f['instructions']
+				except:
+					flist.append(flowdict)
+					continue
 				flist.append(flowdict)
-				continue
-			flist.append(flowdict)
+		except:
+			return
 		
 		return flist
 
 
 	def getFlowIds(self, switch):
 		"""returns flow-ids of all flows of a switch"""
+		try:
+			flowlist=self.getFlowDetails(switch)
+			flowidlst=[]
 
-		flowlist=self.getFlowDetails(switch)
-		flowidlst=[]
-
-		for flow in flowlist:
-			flowidlst.append(flow['id'])
-		return flowidlst
+			for flow in flowlist:
+				flowidlst.append(str(flow['id']))
+			return flowidlst
+		except:
+			return []
 
 
 def main():
-	print FlowRetrieval().retrieveFlow('openflow:22')
+	print FlowRetrieval().getFlowIds('openflow:24')
 	
 if __name__ == '__main__':
 	main()

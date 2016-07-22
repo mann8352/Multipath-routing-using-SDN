@@ -81,12 +81,16 @@ class Driver:
 				print "-------------------------------------"
 				
 				if source!=target:						
-					path=self.dj.anyShortestPath(self.hostdict[target], self.hostdict[source])
+					path1=self.dj.anyShortestPath(self.hostdict[target], self.hostdict[source])
+					path2=self.dj.anyShortestPath(self.hostdict[source], self.hostdict[target])
 					print "Shortest Path between "+self.hostdict[source]+" and "+self.hostdict[target]+" is :"
-					print ' ---> '.join(path)
+					print ' ---> '.join(path1)
 					ch=raw_input('Want to push the path into controller ? (Y/N)')
 					if ((ch=='y') or (ch=='Y')):
-						pass#self.fm.addFlow(path)
+						self.fm.addPathFlow(path1)
+						choice=raw_input('Want to retry ? (Y/N)')
+						if ((choice=='y') or (choice=='Y')): 
+							self.fm.addPathFlow(path2)
 					break
 				else:
 					print "~~Source and destination can't be the same~~~"
@@ -118,13 +122,18 @@ class Driver:
 		appaction=''
 		ethsrc=''
 		ethdest=''
+		ipsrc=''
+		ipdest=''
 		ipport=''
 		
 		actdict={1: 'Send to controller', 2: 'Send to some output port', 3: 'Discard'}	
 		matchdict={1: 'Ethernet Source Address', 
 					2: 'Ethernet Destination Address',
 					3: 'Ethernet Source and Destination Address',
-					4: 'Input Node Connector'}
+					4: 'IPV4 Source Address',
+					5: 'IPV4 Destination Address',
+					6: 'IPV4 Source and Destination Address',
+					7: 'Input Node Connector'}
 
 		try:
 			# getting mac and ip of hosts
@@ -142,7 +151,7 @@ class Driver:
 			print '  You have selected '+self.switchdict[switch]+' to add a flow.'
 			print '-----------------------------------'
 			
-			while 1:
+			"""while 1:
 				count=0
 				print '  Entered Id is prefixed by # automatically. Enter only flow-id. '
 				flowid=raw_input(' Enter flow id : ')
@@ -157,12 +166,12 @@ class Driver:
 						print '-----------------------------------'
 					continue
 				else:
-					break
+					break"""
 			
 			idletimeout=int(raw_input(' Enter idle-timeout : '))
 			hardtimeout=int(raw_input(' Enter hard-timeout : '))
 			priority=int(raw_input(' Enter priority(0-10) : '))
-			maxsize=int(raw_input(' Enter maximum packet size : '))
+			#maxsize=int(raw_input(' Enter maximum packet size : '))
 
 			#getting all node-connectors for the switch
 			nclist=self.fs.getNodeConnectors(self.switchdict[switch])
@@ -237,10 +246,62 @@ class Driver:
 					else:
 						break
 
-
-			elif matchid==4:
+			if matchid==4:
+				print '%s      %s  	    %s' % ('s.no.', 'mac-id', 'ip')
 				print '-----------------------------------'
-				print "  Available ports of "+switchdict[switch]+' are : '
+				for i in range(1, len(macdict)+1):
+					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
+				
+				while 1:
+					print '-----------------------------------'
+					ipsrc=int(raw_input(' Enter IPV4 source address : '))
+					print '-----------------------------------'
+					if ipsrc in range(1, len(ipdict)+1):
+						break
+					else:
+						print '~~~~~Wrong Entry~~~~~'
+						print '-----------------------------------'
+						continue
+			
+			elif matchid==5:
+				print '%s      %s  	    %s' % ('s.no.', 'mac-id', 'ip')
+				print '-----------------------------------'
+				for i in range(1, len(macdict)+1):
+					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
+				while 1:
+					print '-----------------------------------'
+					ipdest=int(raw_input(' Enter IPV4 destination address : '))
+					print '-----------------------------------'
+					if ipdest in range(1, len(ipdict)+1):
+						break
+					else:
+						print '~~~~~Wrong Entry~~~~~'
+						print '-----------------------------------'
+						continue
+			
+			elif matchid==6:
+				print '%s      %s  	    %s' % ('s.no.', 'mac-id', 'ip')
+				print '-----------------------------------'
+				for i in range(1, len(macdict)+1):
+					print '  %d.  %s  %s' % (i, macdict[i], ipdict[i])
+				
+				while 1:
+					print '-----------------------------------'
+					ipsrc=int(raw_input(' Enter IPV4 source address : '))
+					ipdest=int(raw_input(' Enter IPV4 destination address : '))
+					print '-----------------------------------'
+					if ipdict[ipsrc]==ipdict[ipdest]:
+						print '  Source and destination cannot be the same.'
+						print '  Please choose different source and destination.'
+						print '-----------------------------------'
+						continue
+					else:
+						break
+
+
+			elif matchid==7:
+				print '-----------------------------------'
+				print "  Available ports of "+self.switchdict[switch]+' are : '
 				
 				for i in range(1, len(ncdict)+1):
 					print '  %2d.  %s' % (i, ncdict[i])
@@ -255,35 +316,65 @@ class Driver:
 						print '~~~~~Port not available~~~~~'
 						continue
 			
+			mdict={}
+			if matchid==1:
+				mdict={'id': matchid, 'address': {'source': macdict[ethsrc], 'destination': ''}, 'ip-port': ''}
+			elif matchid==2:
+				mdict={'id': matchid, 'address': {'source': '', 'destination': macdict[ethdest]}, 'ip-port': ''}
+			elif matchid==3:
+				mdict={'id': matchid, 'address': {'source': macdict[ethsrc], 'destination': macdict[ethdest]}, 'ip-port': ''}
+			elif matchid==4:
+				mdict={'id': matchid, 'address': {'source': ipdict[ipsrc], 'destination': ''}, 'ip-port': ''}
+			elif matchid==5:
+				mdict={'id': matchid, 'address': {'source': '', 'destination': ipdict[ipdest]}, 'ip-port': ''}
+			elif matchid==6:
+				mdict={'id': matchid, 'address': {'source': ipdict[ipsrc], 'destination': ipdict[ipdest]}, 'ip-port': ''}
+			elif matchid==7:
+				mdict={'id': matchid, 'address': {'source': '', 'destination': ''}, 'ip-port': ipport}
+
+
 			print '-----------------------------------'
 			print '       Applied Action '
 			print '-----------------------------------'
 			for i in range(1, len(actdict)+1):
 				print '  %d.  %s' % (i, actdict[i])
 			print '-----------------------------------'
-			action=int(raw_input("  Enter action to be applied : "))
+			action=int(raw_input("  Enter action to be applied :"))
 			print '-----------------------------------'
 		
 			if action==1:
 				appaction='CONTROLLER'
 			elif action==2:
-				appaction=raw_input(' Enter output port no. : ')
+				print '-----------------------------------'
+				print "  Available ports of "+self.switchdict[switch]+' are : '
+				for i in range(1, len(ncdict)+1):
+					print '  %2d.  %s' % (i, ncdict[i])
+				while 1:
+					print '-----------------------------------'
+					appaction=int(raw_input(' Enter output port no. : '))
+					if appaction in range(1, len(ncdict)+1):
+							break
+					else:
+						print '~~~~~Port not available~~~~~'
+						continue
+		
 			elif action==3:
 				appaction='DISCARD'
+						
+			flowdict={'switch': self.switchdict[switch], 
+						'idle-timeout': idletimeout, 
+						'hard-timeout': hardtimeout, 
+						'priority': priority, 
+						'match': mdict,
+						'action': appaction}
 			
-			flowdict={'switch': switchdict[switch],
-						 'flowid': flowid, 
-						 'idle-timeout': idletimeout, 
-						 'hard-timeout': hardtimeout, 
-						 'priority': priority, 
-						 'max-length': maxsize,
-						 'match': {'id': matchid, 'address':{'source': macdict[ethsrc], 'destination': macdict[ethdest], 'ip-port':ncdict[ipport]}}, 
-						 'action': appaction}
 			print flowdict
-			#fm.addFlow
+			self.fm.addFlow(flowdict)
 
 		except:
 			print "=====Invalid Input======"
+			traceback.print_exc()
+
 
 
 	def getSwitchFlow(self):
@@ -312,6 +403,7 @@ class Driver:
 	
 	def modifySwitchFlow(self):
 		"""   """
+		pass
 
 	def deleteSwitchFlow(self):
 		"""  Deletes a flow from the switch """
@@ -326,38 +418,53 @@ class Driver:
 			
 			#creating dictionary of flow details
 			flowlist=self.fr.getFlowDetails(self.switchdict[switch])
+			if flowlist==[]:
+				print 'Nothing to delete'
+				return
 			for i in range (1, len(flowlist)+1):
 				flowdict[i]=flowlist[i-1]
-			#print flowdict
+			
+			print '-------------------------------------'
+			print ' 1. Delete all flows of '+self.switchdict[switch]
+			print ' 2. Delete flow using flow-id'
+			print '-------------------------------------'
+			choice = int(raw_input(' Enter your choice: '))
+			print '-------------------------------------'
+			
+			#Deleting all flows of a switch
+			if choice==1:
+				self.fm.deleteFlow(self.switchdict[switch])
+			
+			#Deleting a paricular flow of a switch using its flow_id
+			elif choice==2:			
+				print '-----------------------------------'
+				print ' Flows of switch '+self.switchdict[switch]+' are: '
+				print '-----------------------------------'
+				print '%5s %5c %12s %30s         %50s' % ('S.No.', ' ', 'Flow-ID', 'Matching Criteria', 'Instructions')
+				print '-----------------------------------'
+				count=1
+				for flow in flowlist:
+					print '%3d   %5s %-20s    %s' % (count, ' ', flow['id'], str(flow['match']))#+str(flow['instruction'])
+					count += 1
 
-			print '-----------------------------------'
-			print ' Flows of switch '+self.switchdict[switch]+' are: '
-			print '-----------------------------------'
-			print '%5s %5c %12s %30s         %50s' % ('S.No.', ' ', 'Flow-ID', 'Matching Criteria', 'Instructions')
-			print '-----------------------------------'
-			count=1
-			for flow in flowlist:
-				print '%3d   %5s %-20s    %s' % (count, ' ', flow['id'], str(flow['match']))#+str(flow['instruction'])
-				count += 1
-
-			while 1:
-				print ' ------------------------------------------------------------------- '
-				flowseq=int(raw_input(' Enter S.No. : '))
-				flowdict[flowseq]
-				
-				choice=raw_input(" Want to delete flowid no. "+flowlist[flowseq-1]['id']+" ? (Y/N)")
-				if ((choice=='y') or (choice=='Y')): 
-					#delete the flow corresponding to the entered flow-id
-					self.fm.deleteAnyFlow(self.switchdict[switch])#, flowlist[flowseq-1]['id'])
-					return
-				else:
-					break
-				print "-------------------------------------"
+				while 1:
+					print ' ------------------------------------------------------------------- '
+					flowseq=int(raw_input(' Enter S.No. : '))
+					flowdict[flowseq]
+					
+					choice=raw_input(" Want to delete flowid no. "+flowlist[flowseq-1]['id']+" ? (Y/N)")
+					if ((choice=='y') or (choice=='Y')): 
+						self.fm.deleteFlow(self.switchdict[switch], flowlist[flowseq-1]['id'])
+						break
+					else:
+						break
+					print "-------------------------------------"
 
 		except:
-			print '      Invalid choice  '
 			traceback.print_exc()
+			return
 
+	
 	def exit(self):
 		self.exit()
 	
