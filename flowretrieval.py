@@ -26,7 +26,7 @@ class FlowRetrieval:
 			flowlist=response['flow-node-inventory:table'][0]['flow']
 		except:
 			print ' No flow exists'
-			#traceback.print_exc()
+			print '-----------------------------------'
 			return
 		
 		return flowlist

@@ -1,6 +1,8 @@
 
 #Dijkstra's shortest path algorithm
 import sys
+import time
+import copy
 import heapq
 import datetime
 from graph import Graph
@@ -28,22 +30,25 @@ class Dijkstra:
 	def dijkstra(self, aGraph, start, target):
 	   	# print '''Dijkstra's shortest path'''
 	    # Set the distance for the start node to zero 
+	    for v in aGraph:
+	    	v.set_unvisited()
+
 	    start.set_distance(0)
 
 	    # Put tuple pair into the priority queue
+
 	    unvisited_queue = [(v.get_distance(),v) for v in aGraph]
 	    heapq.heapify(unvisited_queue)
-
+	    
 	    while len(unvisited_queue):
-	        # Pops a vertex with the smallest distance 
+	    	# Pops a vertex with the smallest distance 
 	        uv = heapq.heappop(unvisited_queue)
 	        current = uv[1]
 	        current.set_visited()
-
-	        #for next in v.adjacent:
+	       #for next in v.adjacent:
 	        for next in current.adjacent:
 	            # if visited, skip
-	            if next.visited:
+	            if next.visited or next.up==False:
 	                continue
 	            new_dist = current.get_distance() + current.get_weight(next)
 	            
@@ -64,28 +69,13 @@ class Dijkstra:
 	        unvisited_queue = [(v.get_distance(),v) for v in aGraph if not v.visited]
 	        heapq.heapify(unvisited_queue)
 
+	
 
 	def shortest_path(self, sourcehost, destnhost):
 		"""Finds the shortest path, given the source and destination node"""
 		#print "shortest_path starts: "+str(datetime.datetime.now())
-		g = Graph()
-		fs = self.fst#FlowStatistics()
-		nodelist=fs.list_of_nodes()
-		for node in nodelist:
-			g.add_vertex(node)
-
-		edge=fs.edges()
-		edgelist=fs.edges_source_dest()
-
-		#print "Toplogy started: "+str(datetime.datetime.now())
-		i=0
-		while i<len(edgelist):
-			edge_weight=fs.edge_packets(edgelist[i]['id'])
-			edge_state=fs.edge_state(edgelist[i]['id'])
-			if edge_state==1:
-				g.add_edge(edgelist[i]['source'], edgelist[i]['destn'], edge_weight)
-			i += 1
-		#print "Toplogy End: "+str(datetime.datetime.now())
+		g=Graph()
+		#print gg#print "Toplogy End: "+str(datetime.datetime.now())
 		#print "Graph start: "+str(datetime.datetime.now())
 		#print 'Graph data:'
 		for v in g:
@@ -111,7 +101,6 @@ class Dijkstra:
 	
 	
 	def allShortestPath(self):
-		#print "path starts: "+str(datetime.datetime.now())
 		"""returns the shortest path for each host source-destination pair"""
 		fs=self.fst#FlowStatistics()
 		fm=self.fmt#FlowManagement()
@@ -130,10 +119,12 @@ class Dijkstra:
 					print ' ---> '.join(path)
 					print "_________________________________________________________________________"
 					fm.addPathFlow(path)
+					time.sleep(3)
+					#fm.addPathFlow(path.reverse())
 				j += 1
 			i += 1
-		
-			
+	
+	
 
 def main():
 	#print "starts: "+str(datetime.datetime.now())

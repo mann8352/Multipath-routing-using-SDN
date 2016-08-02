@@ -19,7 +19,7 @@ class FlowManagement:
 			traceback.print_exc()
 
 	def addPathFlow(self, pathlist):
-		""" Adds new path flows into the switch """
+		""" Adds a path flow to the switch """
 		try:
 			edgesd=self.fs.edges_source_dest()
 			edge=self.fs.edges()
@@ -56,12 +56,12 @@ class FlowManagement:
 					break
 				y += 1
 			x += 1
-		
+		"""
 		print "--------------src port no-----------------------------"
 		print sourceport
 		print "--------------dest port no-----------------------------"
 		print destnport
-		print "-------------------------------------------------------"  
+		print "-------------------------------------------------------"  """
 		
 		'adding flows into the switches'
 		h = httplib2.Http(".cache")
@@ -100,11 +100,11 @@ class FlowManagement:
 			try:
 				#data={'flow-node-inventory:table': [{'id':0, 'flow':[{'idle-timeout': 300, 'flags': '', 'hard-timeout': 300, 'priority': 10, 'cookie': 3026418949592973442, 'table_id': 0, 'id': '#'+srchost+'-'+desthost, 'match': {'ethernet-match': {'ethernet-source': {'address': srchost}, 'ethernet-destination': {'address': desthost}}}, 'instructions': {'instruction': [{'order': 0, 'apply-actions': {'action': [{'output-action': {'max-length': 65535, 'output-node-connector': port}, 'order': 0}]}}]}}]}]}#, 'flow-hash-id-map':[{'flow-id': '#manish', 'hash': "Match [_ethernetMatch=EthernetMatch [_ethernetDestination=EthernetDestination [_address=MacAddress [_value=0A:3E:85:D2:3D:EF], augmentation=[]], _ethernetSource=EthernetSource [_address=MacAddress [_value=66:8F:00:F2:71:96], augmentation=[]], augmentation=[]], augmentation=[]]103026418949592973435"}]]}]}
 				#response, request=h.request(url, "PUT", json.dumps(data), headers=header)
-				data="<?xml version='1.0' encoding='UTF-8' standalone='no'?> <flow xmlns='urn:opendaylight:flow:inventory'> <priority>10</priority> <flow-name>manish</flow-name><id>"+str(end_url)+"</id><hard-timeout>3600</hard-timeout> <table_id>0</table_id><match> <ethernet-match><ethernet-source><address>"+srchost+"</address></ethernet-source> <ethernet-destination><address>"+desthost+"</address></ethernet-destination></ethernet-match></match><instructions> <instruction> <order>0</order> <apply-actions> <action> <order>0</order> <output-action> <max-length>65535</max-length><output-node-connector>"+port+"</output-node-connector></output-action> </action> </apply-actions> </instruction> </instructions><cookie>3026418949592973326</cookie><idle-timeout>1800</idle-timeout> </flow>"
+				data="<?xml version='1.0' encoding='UTF-8' standalone='no'?> <flow xmlns='urn:opendaylight:flow:inventory'> <priority>10</priority> <flow-name>manish</flow-name><id>"+str(end_url)+"</id><hard-timeout>0</hard-timeout> <table_id>0</table_id><match> <ethernet-match><ethernet-source><address>"+srchost+"</address></ethernet-source> <ethernet-destination><address>"+desthost+"</address></ethernet-destination></ethernet-match></match><instructions> <instruction> <order>0</order> <apply-actions> <action> <order>0</order> <output-action> <max-length>65535</max-length><output-node-connector>"+port+"</output-node-connector></output-action> </action> </apply-actions> </instruction> </instructions><cookie>3026418949592973326</cookie><idle-timeout>0</idle-timeout> </flow>"
 				response, request=h.request(url, "PUT", data, headers=header)
 				print "-----Response of putting flow in switch "+nodeid+"-----"
 				print response
-				print "====================="
+				print "===================================================================="
 			except:
 				traceback.print_exc()
 			m += 1
@@ -190,7 +190,7 @@ class FlowManagement:
 			response, request=h.request(url, "PUT", data, headers=header)
 			print "-----Response of putting flow in switch "+switch+"-----"
 			print response
-			print "====================="
+			print "======================================================"
 		except:
 			traceback.print_exc()
 
@@ -198,9 +198,8 @@ class FlowManagement:
 	
 	def deleteFlow(self, switch_id, *flow_id):
 		""" Deletes flow with id=flow_id from switch with id=switch_id """
-		
 		length=len(flow_id)
-		print length
+		
 		h = httplib2.Http(".cache")
 		h.add_credentials('admin', 'admin')
 		header={'Content-Type':'application/json', 'Accept': 'application/json'}
@@ -210,10 +209,13 @@ class FlowManagement:
 		try:
 			if length==1:
 				url=base_url+switch_id+end_url+str(flow_id[0])
+				print ' Deletion status of flow-id '+str(flow_id[0])+' in '+switch_id
 			elif length==0:
 				url=base_url+switch_id
-			print url
-				
+				print ' Deletion status of flows of '+switch_id
+			#print url
+			
+			print "-------------------------------------"	
 			res, req=h.request(url, "DELETE", headers=header)
 			print res
 			print "--------------------------------------"
@@ -222,12 +224,9 @@ class FlowManagement:
 			traceback.print_exc()
 			return
 			
-		
-
-
 
 	def deleteAnyFlow(self, switch_id):
-		""" Deletes flow with id=flow_id from switch with id=switch_id """
+		""" Deletes all flows from a switch """
 
 		fs=FlowStatistics()
 		switchlist=fs.list_of_switches()
@@ -250,17 +249,13 @@ class FlowManagement:
 		i=0
 		while i<len(switchlist):
 			try:
-				print "Deletion status of "+switch_id
-				print "-------------------------------------"
+				print ' Deletion status of flows of '+switch_id
+				print '-------------------------------------'
 				get_url=base_get_url+'node/'+switch_id+end_url
 				del_url=base_del_url+'node/'+switch_id+end_url
 				getresp, getreq=h.request(get_url, "GET")
 				get_response=json.loads(getreq)
 
-				"changes start"
-				#print get_response
-
-				"changes end "
 				#print getresp
 				#print "______________________________________"
 					

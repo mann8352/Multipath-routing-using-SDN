@@ -285,7 +285,7 @@ class FlowStatistics:
 
 
 def main():
-	FlowStatistics().getNodeConnectors('openflow:22')
+	print len(FlowStatistics().edges())
 	#self.statistics()
 	#topology()
 	#dynamics()

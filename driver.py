@@ -1,7 +1,9 @@
 #Driver program to run the application
 import sys
-import datetime
+import time
 import traceback
+from graph import Graph
+from vertex import Vertex
 from dijkstra import Dijkstra
 from flow import FlowManagement
 from loadbalancer import FlowStatistics
@@ -14,6 +16,8 @@ class Driver:
 		self.fs=FlowStatistics()
 		self.fm=FlowManagement()
 		self.dj=Dijkstra()
+		self.g=Graph()
+		#self.fm.deleteAllFlow()
 		try:
 			self.hostlist=self.fs.list_of_hosts()
 			self.switchlist=self.fs.list_of_switches()
@@ -49,30 +53,10 @@ class Driver:
 			print '  %2d.  %s' % (i, self.switchdict[i])
 
 	
-	def getAllPaths(self):
-		"""Gets different paths between two hosts"""
-
-		self.getAllHosts()
-		try:
-			print "-------------------------------------"
-			source=int (raw_input("  Input Source sequence no. : "))
-			target=int (raw_input("  Input Target sequence no. : "))
-			print "-------------------------------------"
-			
-			if source==target:
-				print "~~Source and destination can't be the same~~~"
-				print "-------------------------------------"
-		except :
-			print '~~~Invalid Choice~~~'
-			print "-------------------------------------"
-		
-
-	
 	def getAnyShortestPath(self):
-		"Gets the shortest path between any two hosts"
+		"Gives the shortest path between any two hosts"
 
 		self.getAllHosts()
-
 		while 1:
 			try:
 				print "-------------------------------------"
@@ -83,32 +67,42 @@ class Driver:
 				if source!=target:						
 					path1=self.dj.anyShortestPath(self.hostdict[target], self.hostdict[source])
 					path2=self.dj.anyShortestPath(self.hostdict[source], self.hostdict[target])
-					print "Shortest Path between "+self.hostdict[source]+" and "+self.hostdict[target]+" is :"
-					print ' ---> '.join(path1)
-					ch=raw_input('Want to push the path into controller ? (Y/N)')
-					if ((ch=='y') or (ch=='Y')):
-						self.fm.addPathFlow(path1)
-						choice=raw_input('Want to retry ? (Y/N)')
-						if ((choice=='y') or (choice=='Y')): 
+					#print path1
+					#print path2
+					if len(path1)>1:
+						print "Shortest Path between "+self.hostdict[source]+" and "+self.hostdict[target]+" is :"
+						print ' ---> '.join(path1)
+						ch=raw_input('Want to push the path into controller? (Y/N)')
+						if ((ch=='y') or (ch=='Y')):
+							self.fm.addPathFlow(path1)
+							#choice=raw_input('Want to add path in reverse direction? (Y/N)')
+							#if ((choice=='y') or (choice=='Y')): 
+							time.sleep(5)
+								#path1.reverse()
 							self.fm.addPathFlow(path2)
-					break
+						return
+						
+					else:
+						print " No path exists betweeen "+self.hostdict[source]+" and "+self.hostdict[target]
+						return
 				else:
 					print "~~Source and destination can't be the same~~~"
 					choice=raw_input('Want to retry ? (Y/N)')
 					if ((choice=='y') or (choice=='Y')): 
 						continue
 					else:
-						break
+						return
 					print "-------------------------------------"
 			except:
-				traceback.print_exc()
+				#traceback.print_exc()
+				print '	~~~~~INVALID CHOICE~~~~~'
 				print "-------------------------------------"
 				return
 
 	
-	def getAllShortestPath(self):
+	def clearFlows(self):
 		"""  Returns shortest path between each pair of hosts"""
-		self.dj.allShortestPath()
+		self.fm.deleteAllFLow()
 
 	
 	def addSwitchFlow(self):
@@ -148,29 +142,21 @@ class Driver:
 
 			print '-----------------------------------'
 			switch=int(raw_input("  Enter switch no. : "))
+
+			#checking swith status
+			vertex_node = self.g.get_vertex(self.switchdict[switch])
+			if vertex_node.get_status()==False:
+				print self.switchdict[switch]+' is DOWN at the moment.'
+				print 'Please first make it UP and then try adding flows.'
+				print '----------------------------------------------------------'
+				return
+			
 			print '  You have selected '+self.switchdict[switch]+' to add a flow.'
 			print '-----------------------------------'
 			
-			"""while 1:
-				count=0
-				print '  Entered Id is prefixed by # automatically. Enter only flow-id. '
-				flowid=raw_input(' Enter flow id : ')
-				flowidlist=self.fr.getFlowIds(self.switchdict[switch])
-				if ('#'+flowid) in flowidlist:
-					print '-----------------------------------'
-					print 'flowid '+flowid+' already exists in '+self.switchdict[switch]
-					if count==0:
-						print ' Already present IDs are : '
-						for ids in flowidlist:
-							print ids
-						print '-----------------------------------'
-					continue
-				else:
-					break"""
-			
 			idletimeout=int(raw_input(' Enter idle-timeout : '))
 			hardtimeout=int(raw_input(' Enter hard-timeout : '))
-			priority=int(raw_input(' Enter priority(0-10) : '))
+			priority=int(raw_input(' Enter priority : '))
 			#maxsize=int(raw_input(' Enter maximum packet size : '))
 
 			#getting all node-connectors for the switch
@@ -360,6 +346,9 @@ class Driver:
 		
 			elif action==3:
 				appaction='DISCARD'
+			else:
+				print '		~~~~~Invalid Action~~~~~'
+				return
 						
 			flowdict={'switch': self.switchdict[switch], 
 						'idle-timeout': idletimeout, 
@@ -373,13 +362,13 @@ class Driver:
 
 		except:
 			print "=====Invalid Input======"
-			traceback.print_exc()
+			#traceback.print_exc()
+			return
 
 
 
 	def getSwitchFlow(self):
 		""" Returns the details of all flows of the switch """
-
 		flowlist=[]
 		self.getAllSwitches()
 		try:
@@ -387,27 +376,26 @@ class Driver:
 			switch=int(raw_input("  Enter switch no. : "))
 			print '-----------------------------------'
 			flowlist=self.fr.getFlowDetails(self.switchdict[switch])
-
-			print '-----------------------------------'
-			print ' Flows of switch '+self.switchdict[switch]+' are: '
-			print '-----------------------------------'
-			print '%s      %s         %s' % ('Flow-ID', 'Matching Criteria', 'Instructions')
-			print '-----------------------------------'
+			if flowlist==None:
+				return
+			print ' ------------------------------------------------------------------- '
+			print ' 		Flows of '+self.switchdict[switch]+' : '
+			print ' ------------------------------------------------------------------- '
+			print '%8s      %10s              %10s' % ('Flow-ID', 'Source', 'Destination')
+			print ' ------------------------------------------------------------------- '
 			for flow in flowlist:
-				print flow['id']+'		'+str(flow['match'])+'		'#+str(flow['instruction'])
-
+				try:
+					print '%5s    %20s   %20s' %(flow['id'], str(flow['match']['ethernet-match']['ethernet-source']['address']), str(flow['match']['ethernet-match']['ethernet-destination']['address']))#+str(flow['instruction'])
+				except:
+					print '%5s   %18s %23s' %(flow['id'], str(flow['match']['ipv4-source']), str(flow['match']['ipv4-destination']))
+			print ' ------------------------------------------------------------------- '
 		except:
-			print '      Invalid choice  '
-			traceback.print_exc()
-			
+			print '         ~~~~~~Invalid choice~~~~~~'
+			#traceback.print_exc()
+			return
 	
-	def modifySwitchFlow(self):
-		"""   """
-		pass
-
 	def deleteSwitchFlow(self):
 		"""  Deletes a flow from the switch """
-
 		flowlist=[]
 		flowdict={}
 		self.getAllSwitches()
@@ -415,11 +403,17 @@ class Driver:
 			print '-----------------------------------'
 			switch=int(raw_input("  Enter switch no. : "))
 			print '-----------------------------------'
-			
-			#creating dictionary of flow details
+
+			#checking switch status
+			vertex_node = self.g.get_vertex(self.switchdict[switch])
+			if vertex_node.get_status()==False:
+				print self.switchdict[switch]+' is DOWN at the moment.'
+				print 'Please first make it UP and then try deleting flows.'
+				print '----------------------------------------------------------'
+				return
+
 			flowlist=self.fr.getFlowDetails(self.switchdict[switch])
-			if flowlist==[]:
-				print 'Nothing to delete'
+			if flowlist==None:
 				return
 			for i in range (1, len(flowlist)+1):
 				flowdict[i]=flowlist[i-1]
@@ -433,18 +427,21 @@ class Driver:
 			
 			#Deleting all flows of a switch
 			if choice==1:
-				self.fm.deleteFlow(self.switchdict[switch])
+				self.fm.deleteAnyFlow(self.switchdict[switch])
 			
 			#Deleting a paricular flow of a switch using its flow_id
 			elif choice==2:			
-				print '-----------------------------------'
-				print ' Flows of switch '+self.switchdict[switch]+' are: '
-				print '-----------------------------------'
-				print '%5s %5c %12s %30s         %50s' % ('S.No.', ' ', 'Flow-ID', 'Matching Criteria', 'Instructions')
-				print '-----------------------------------'
+				print ' ------------------------------------------------------------------- '
+				print '   		Flows of '+self.switchdict[switch]+' : '
+				print ' ------------------------------------------------------------------- '
+				print '%6s %7s %13s %27s' % (' S.No.', 'Flow-ID', 'source', 'Destination')
+				print ' ------------------------------------------------------------------- '
 				count=1
 				for flow in flowlist:
-					print '%3d   %5s %-20s    %s' % (count, ' ', flow['id'], str(flow['match']))#+str(flow['instruction'])
+					try:
+						print '%3d   %5s %22s  %22s' % (count, flow['id'], str(flow['match']['ethernet-match']['ethernet-source']['address']), str(flow['match']['ethernet-match']['ethernet-destination']['address']))
+					except:
+						print '%3d   %5s %18s  %23s' % (count, flow['id'], str(flow['match']['ipv4-source']), str(flow['match']['ipv4-destination']))
 					count += 1
 
 				while 1:
@@ -465,6 +462,79 @@ class Driver:
 			return
 
 	
+	def switchDown(self):
+		"""Brings down a switch"""
+		
+		ver_dict={}
+		print "-------------------------------------"
+		print "=====     LIST OF SWITCHES(which are up)      ====="
+		print "-------------------------------------"
+		count=1
+		try:
+			#getting list of all vertices' keys(i.e. name of vertices)
+			verlist=self.g.get_vertices()
+			for vertex in verlist:
+				vertex_node = self.g.get_vertex(vertex)
+				if vertex_node.get_status() and ('host' not in vertex):		#only switches are considered, but not the host
+					print '   %d.   %s ' % (count, str(vertex))
+					ver_dict[count]=vertex
+					count += 1
+			if ver_dict=={}:
+				print 'No more active switches are present'
+				return
+			while 1:
+				print "-------------------------------------"
+				ver_no=int(raw_input(' Enter S.No. : '))
+				#to check for invalid inputs. Gives traceback for invalid inputs
+				ver_dict[ver_no]
+				self.g.get_vertex(ver_dict[ver_no]).set_status(False)
+				
+				choice=raw_input(" Want to bring down another switch ? (Y/N)")
+				if ((choice=='y') or (choice=='Y')): 
+					self.switchDown()
+				return
+				print "-------------------------------------"
+		except:
+			traceback.print_exc()
+
+
+
+	def switchUp(self):
+		"""Brings up a switch"""
+		
+		ver_dict={}
+		print "-------------------------------------"
+		print "=====     LIST OF SWITCHES(which are down)      ====="
+		print "-------------------------------------"
+		count=1
+		try:
+			#getting list of all vertices' keys(i.e. name of vertices)
+			verlist=self.g.get_vertices()
+			for vertex in verlist:
+				vertex_node = self.g.get_vertex(vertex)
+				if (vertex_node.get_status()==False) and ('host' not in vertex):		#only switches are considered, but not the host
+					print '   %d.   %s ' % (count, str(vertex))
+					ver_dict[count]=vertex
+					count += 1
+			if ver_dict=={}:
+				print 'No more inactive switches are present'
+				return
+			while 1:
+				print "-------------------------------------"
+				ver_no=int(raw_input(' Enter S.No. : '))
+				#to check for invalid inputs. Gives traceback for invalid inputs
+				ver_dict[ver_no]
+				self.g.get_vertex(ver_dict[ver_no]).set_status(True)
+				
+				choice=raw_input(" Want to bring up another switch ? (Y/N)")
+				if ((choice=='y') or (choice=='Y')): 
+					self.switchUp()
+				return
+				print "-------------------------------------"
+		except:
+			traceback.print_exc()
+
+
 	def exit(self):
 		self.exit()
 	
@@ -472,18 +542,18 @@ class Driver:
 		" Program to test the application "
 		
 		while 1:
-			print '-------------------------------------'
-			print '     MULTIPATH ROUTING USING SDN     '
-			print '-------------------------------------'
+			print '============================================='
+			print '    MULTIPATH ROUTING OF VIDEOS USING SDN    '
+			print '============================================='
 			print ' 1. Get all Hosts'
 			print ' 2. Get all Switches'
-			print ' 3. Get all possible paths between any pair of hosts'
-			print ' 4. Get Shortest Path between any pair of hosts'
-			print ' 5. Get Shortest Path between every pair of hosts'
-			print ' 6. Add a flow to a particular Switch'
-			print ' 7. Get flow from a particular Switch'
-			print ' 8. Modify flow of a Switch'
-			print ' 9. Delete a flow from the Switch'
+			print ' 3. Get Shortest Path between any pair of hosts'
+			print ' 4. Clear all flows from each switch'
+			print ' 5. Add a flow to a particular Switch'
+			print ' 6. Get flow from a particular Switch'
+			print ' 7. Delete a flow from the Switch'
+			print ' 8. Bring a switch down'
+			print ' 9. Bring a switch up'
 			print '10. Exit'
 			print '-------------------------------------'
 
@@ -498,14 +568,14 @@ class Driver:
 						
 				choice = { 1 : self.getAllHosts,
 							 2 : self.getAllSwitches,
-							 3 : self.getAllPaths,
-							 4 : self.getAnyShortestPath,
-							 5 : self.getAllShortestPath,
-							 6 : self.addSwitchFlow,
-							 7 : self.getSwitchFlow,
-							 8 : self.modifySwitchFlow,
-							 9 : self.deleteSwitchFlow,
-							 10 : self.exit }
+							 3 : self.getAnyShortestPath,
+							 4 : self.clearFlows,
+							 5 : self.addSwitchFlow,
+							 6 : self.getSwitchFlow,
+							 7 : self.deleteSwitchFlow,
+							 8: self.switchDown,
+							 9 : self.switchUp,
+							10 : self.exit }
 				
 				choice[option]()
 			except:

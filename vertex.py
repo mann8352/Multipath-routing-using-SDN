@@ -12,6 +12,8 @@ class Vertex:
         self.visited = False  
         # Predecessor
         self.previous = None
+        #status od switch i.e. up/down
+        self.up=True
 
     def add_neighbor(self, neighbor, weight=0):
         self.adjacent[neighbor] = weight
@@ -36,6 +38,17 @@ class Vertex:
 
     def set_visited(self):
         self.visited = True
+
+    def set_unvisited(self):
+        self.visited = False
+        self.previous = None
+        self.distance = sys.maxint
+
+    def set_status(self, stat):
+        self.up=stat
+        
+    def get_status(self):
+       return self.up
 
     def __str__(self):
         return str(self.id) + ' adjacent: ' + str([x.id for x in self.adjacent])
